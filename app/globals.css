@@ -1,0 +1,356 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.min.css');
+
+/* ─── PALETTE — 2 colors and black. That's it. ─── */
+:root {
+  --bg:     #0b0b0b;
+  --paper:  #121212;
+  --ink:    #f1efe9;
+  --ink-2:  #9a968d;
+  --ink-3:  #55524b;
+  --line:   #262523;
+  --line-2: #3a3834;
+
+  --fear:   #2e62f5;
+  --fear-2: #1947c7;
+  --greed:  #ef3b2c;
+  --greed-2:#b9241a;
+  --money:  #f2c14e;
+  --buy:    #3ba55d;
+  --sell:   #ef3b2c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard Variable', 'Inter', system-ui, sans-serif;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── TYPE ─── */
+.font-display {
+  font-family: 'Archivo Black', 'Pretendard Variable', sans-serif;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
+}
+.font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* ─── THICK PANEL — the anti-glass. Flat, solid border. ─── */
+.panel {
+  background: var(--paper);
+  border: 2px solid var(--line-2);
+}
+.panel-fear  { background: var(--paper); border: 2px solid var(--fear);  }
+.panel-greed { background: var(--paper); border: 2px solid var(--greed); }
+.panel-black { background: #000;          border: 2px solid var(--line-2); }
+
+/* Header bar inside a panel */
+.panel-head {
+  border-bottom: 2px solid var(--line-2);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-transform: none;
+}
+.panel-head .count { color: var(--ink-3); margin-left: auto; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; }
+
+.panel-fear .panel-head  { border-bottom-color: var(--fear);  color: var(--fear); }
+.panel-greed .panel-head { border-bottom-color: var(--greed); color: var(--greed); }
+
+/* ─── SKELETON LOADING BAR ─── */
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--line) 0%,
+    var(--line-2) 50%,
+    var(--line) 100%);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+  border-radius: 1px;
+  display: block;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+
+/* ─── BLOCK CHIPS (action tags) — flat, sharp ─── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  border: 1.5px solid currentColor;
+  line-height: 1;
+}
+.chip-buy   { color: var(--buy);   background: color-mix(in srgb, var(--buy) 14%, transparent); }
+.chip-sell  { color: var(--sell);  background: color-mix(in srgb, var(--sell) 14%, transparent); }
+.chip-fear  { color: var(--fear);  background: color-mix(in srgb, var(--fear) 14%, transparent); }
+.chip-greed { color: var(--greed); background: color-mix(in srgb, var(--greed) 14%, transparent); }
+.chip-money { color: var(--money); background: color-mix(in srgb, var(--money) 14%, transparent); }
+.chip-ghost { color: var(--ink-2); background: transparent; }
+
+/* ─── MESSAGE BUBBLES — comic-style tails via clip-path rectangles ─── */
+.bubble {
+  padding: 10px 12px;
+  border: 2px solid var(--line-2);
+  background: #0d0d0d;
+  font-size: 14px;
+  line-height: 1.45;
+  position: relative;
+}
+.bubble-fear  { border-color: var(--fear);  background: color-mix(in srgb, var(--fear)  10%, #0a0a0a); color: #d6e2ff; }
+.bubble-greed { border-color: var(--greed); background: color-mix(in srgb, var(--greed) 10%, #0a0a0a); color: #ffe0d9; }
+.bubble-quant { border-color: var(--line-2); background: #101010; color: #d9d6cd; }
+
+/* ─── REP BAR ─── */
+.bar { height: 4px; background: #1a1a1a; border: 1px solid var(--line); }
+.bar > span { display: block; height: 100%; background: var(--money); }
+.bar-fear  > span { background: var(--fear); }
+.bar-greed > span { background: var(--greed); }
+
+/* ─── BUTTONS ─── */
+.btn {
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 14px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 80ms ease, background 80ms ease, color 80ms ease;
+}
+.btn:hover { background: var(--ink); color: var(--bg); }
+.btn:active { transform: translate(1px, 1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-money { border-color: var(--money); color: var(--money); }
+.btn-money:hover { background: var(--money); color: #000; }
+.btn-fear  { border-color: var(--fear);  color: var(--fear); }
+.btn-fear:hover  { background: var(--fear);  color: #fff; }
+.btn-greed { border-color: var(--greed); color: var(--greed); }
+.btn-greed:hover { background: var(--greed); color: #fff; }
+
+/* ─── TAB ─── */
+.tab {
+  padding: 12px 18px 12px 0;
+  color: var(--ink-2);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: transparent;
+  border: none;
+}
+.tab:hover { color: var(--ink); }
+.tab[data-active="true"] { color: var(--ink); }
+.tab[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 18px; bottom: -1px;
+  height: 3px;
+  background: var(--ink);
+}
+.tab .hint { color: var(--ink-3); font-size: 11px; font-weight: 500; }
+
+/* ─── ANIMATIONS (restrained) ─── */
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(-1.5px, 0.5px) rotate(-0.6deg); }
+  75% { transform: translate(1.5px, -0.5px) rotate(0.6deg); }
+}
+@keyframes beat {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-shake { animation: shake 1.2s ease-in-out infinite; }
+.animate-beat  { animation: beat  0.9s ease-in-out infinite; }
+.animate-pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+.slide-in      { animation: slide-in 0.35s ease-out; }
+.animate-ticker { animation: ticker-scroll 90s linear infinite; white-space: nowrap; }
+.animate-ticker:hover { animation-play-state: paused; }
+
+/* ─── SCROLLBAR — minimal ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+
+/* ─── TIER SYSTEM (ERC-8004) ─── */
+.tier-card { position: relative; }
+
+/* LEGEND — gold solid border + subtle glint.
+   NOTE: no mix-blend-mode / no < 1 opacity on the ::before, otherwise the
+   card becomes a stacking context and traps hover tooltips inside it. */
+.tier-legend { border: 2px solid var(--money); position: relative; }
+.tier-legend::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 40%, color-mix(in srgb, var(--money) 18%, transparent) 50%, transparent 60%);
+  background-size: 220% 100%;
+  animation: glint 4.5s ease-in-out infinite;
+}
+@keyframes glint {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* VETERAN — amber border */
+.tier-veteran { border: 2px solid color-mix(in srgb, var(--money) 70%, var(--line-2)); }
+
+/* TRUSTED — default */
+.tier-trusted { /* inherits panel style */ }
+
+/* NOVICE — subtle mute via desaturated border (NOT opacity — that creates
+   a stacking context and would trap tooltips). */
+.tier-novice {
+  border-color: color-mix(in srgb, var(--line-2) 90%, transparent);
+}
+
+/* UNVERIFIED — dashed red border, warning tint */
+.tier-unverified {
+  border: 2px dashed var(--greed);
+  background: color-mix(in srgb, var(--greed) 4%, var(--paper));
+}
+
+/* Tier badge chip */
+.tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  border: 1.5px solid currentColor;
+  line-height: 1.2;
+}
+.tier-chip-legend     { color: var(--money); background: color-mix(in srgb, var(--money) 14%, transparent); }
+.tier-chip-veteran    { color: color-mix(in srgb, var(--money) 80%, var(--ink)); background: color-mix(in srgb, var(--money) 10%, transparent); }
+.tier-chip-trusted    { color: var(--ink-2); background: transparent; }
+.tier-chip-novice     { color: var(--ink-3); background: transparent; }
+.tier-chip-unverified { color: var(--greed); background: color-mix(in srgb, var(--greed) 14%, transparent); }
+
+/* ? help marker + hover tooltip */
+.tier-chip { position: relative; }
+.tier-chip:hover { z-index: 9999; }  /* raise whole chip so tooltip escapes sibling stacking */
+.tier-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 2px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: help;
+  position: relative;
+  transition: opacity 120ms ease;
+}
+.tier-help:hover { opacity: 1; z-index: 9999; }
+
+.tier-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  padding: 10px 12px;
+  background: #0a0a0a;
+  border: 2px solid var(--money);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  z-index: 99999;   /* above any sibling / card / panel */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tier-help:hover .tier-tooltip { opacity: 1; }
+.tier-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px; height: 10px;
+  background: #0a0a0a;
+  border-top: 2px solid var(--money);
+  border-left: 2px solid var(--money);
+}
+.tier-tooltip-head {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+.tier-tooltip-tier {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.tier-tooltip-body { color: var(--ink); }
+.tier-tooltip-foot { color: var(--ink-3); font-size: 10px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
+
+/* ─── UTIL — used by components ─── */
+.divider-h { height: 2px; background: var(--line-2); }
+.divider-v { width: 2px; background: var(--line-2); }
+.hairline { border-top: 1px solid var(--line); }
+.text-ink  { color: var(--ink); }
+.text-ink-2 { color: var(--ink-2); }
+.text-ink-3 { color: var(--ink-3); }
+.text-fear  { color: var(--fear); }
+.text-greed { color: var(--greed); }
+.text-money { color: var(--money); }
+.text-buy   { color: var(--buy); }
+.text-sell  { color: var(--sell); }
+.bg-fear    { background: var(--fear); }
+.bg-greed   { background: var(--greed); }
+.bg-money   { background: var(--money); }
+.border-line { border-color: var(--line-2); }

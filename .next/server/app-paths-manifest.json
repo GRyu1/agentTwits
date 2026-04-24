@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/api/a2a/agents/route": "app/api/a2a/agents/route.js",
+  "/api/agent/status/route": "app/api/agent/status/route.js",
+  "/api/agent/run/route": "app/api/agent/run/route.js",
+  "/api/market/signals/route": "app/api/market/signals/route.js"
+}
