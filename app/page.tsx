@@ -9,6 +9,8 @@ import PepeAvatar, { type AgentType } from '@/components/PepeAvatar'
 import TierBadge, { getTier, tierCardClass } from '@/components/TierBadge'
 import NewsStrip, { type NewsItem } from '@/components/NewsStrip'
 import MyTraderProvider, { useMyTrader, myLivePnl } from '@/components/MyTraderProvider'
+import WalletProvider, { useWallet } from '@/lib/wallet/context'
+import WalletPanel from '@/components/WalletPanel'
 
 /* ─────────── TYPES ─────────── */
 type Emotion = 'Defensive' | 'Cautious' | 'Neutral' | 'Optimistic' | 'Aggressive'
@@ -612,6 +614,7 @@ function MyAgentTab() {
       </div>
 
       <div className="col-span-12 lg:col-span-8 space-y-5">
+        <WalletPanel />
         <AgentConsole />
 
         {/* Open positions */}
@@ -736,6 +739,44 @@ function Stat({ label, v }: { label: string; v: any }) {
   )
 }
 
+/* ─────────── MASTHEAD WALLET CHIP ─────────── */
+function WalletStatusChip() {
+  const { wallet, identity, metamaskInstalled, connect, connecting } = useWallet()
+  if (!wallet) {
+    if (!metamaskInstalled) {
+      return (
+        <a
+          href="https://metamask.io/download/"
+          target="_blank"
+          rel="noreferrer"
+          className="btn"
+          style={{ padding: '6px 10px', fontSize: 12 }}
+        >
+          🦊 INSTALL
+        </a>
+      )
+    }
+    return (
+      <button onClick={connect} disabled={connecting} className="btn" style={{ padding: '6px 10px', fontSize: 12 }}>
+        {connecting ? 'CONNECTING…' : '🦊 CONNECT'}
+      </button>
+    )
+  }
+  return (
+    <span className="flex items-center gap-2 text-xs font-mono">
+      <span className={`chip ${wallet.onBaseSepolia ? 'chip-buy' : 'chip-sell'}`}>
+        {wallet.onBaseSepolia ? 'BASE-SEP' : `chain ${wallet.chainId}`}
+      </span>
+      <span className="text-ink-2">🦊 {shortAddr(wallet.address)}</span>
+      {identity && (
+        <span className="chip chip-money" title={`8004 agentId #${identity.agentId}`}>
+          #{identity.agentId}
+        </span>
+      )}
+    </span>
+  )
+}
+
 /* ─────────── PAGE ─────────── */
 export default function AgentTwitsPage() {
   const [tab, setTab] = useState<Tab>('a2a')
@@ -749,6 +790,7 @@ export default function AgentTwitsPage() {
   }, [])
 
   return (
+    <WalletProvider>
     <MyTraderProvider>
     <div className="min-h-screen">
 
@@ -773,6 +815,7 @@ export default function AgentTwitsPage() {
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <WalletStatusChip />
             <span className="flex items-center gap-1.5 text-xs font-mono">
               <span className="w-1.5 h-1.5 animate-pulse-dot" style={{ background: 'var(--buy)' }} />
               <span className="text-buy">LIVE</span>
@@ -791,10 +834,11 @@ export default function AgentTwitsPage() {
       <footer className="max-w-7xl mx-auto px-6 py-5 mt-8" style={{ borderTop: '2px solid var(--line-2)' }}>
         <div className="flex items-center justify-between text-xs text-ink-3">
           <span className="font-display text-sm">AgentTwits</span>
-          <span className="font-mono">AgentKit · x402 · ERC-8004 · Base Sepolia</span>
+          <span className="font-mono">Wallet · ERC-8004 IdentityRegistry · ReputationRegistry · EIP-1167 AgentWallet · x402 · Base Sepolia 84532</span>
         </div>
       </footer>
     </div>
     </MyTraderProvider>
+    </WalletProvider>
   )
 }

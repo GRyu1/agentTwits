@@ -12,6 +12,10 @@ import {
 } from './store'
 import { BASE_SEPOLIA } from '../uniswap/addresses'
 import { decide } from './decide'
+import { decideWithFlock } from './llm'
+import { getAgentByOwner, recordDepositPull } from '../erc8004/store'
+import { pullDepositToOwner } from '../erc8004/agent-wallet'
+import type { Address } from 'viem'
 
 const SLEEP = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -28,8 +32,19 @@ export async function runAgentCycle(opts: {
   persona: 'yolo' | 'quant' | 'scared'
   baseUrl: string
   forceDirection?: 'LONG' | 'SHORT' | 'AUTO'
+  ownerAddress?: Address       // 8004 token holder (auth root)
 }) {
   const run = newRun()
+
+  // Bind to ERC-8004 agent record, if the caller's wallet has registered.
+  const erc8004Agent = opts.ownerAddress ? getAgentByOwner(opts.ownerAddress) : null
+  if (erc8004Agent) {
+    updateRun({
+      agentId: erc8004Agent.agentId,
+      agentWalletAddress: erc8004Agent.agentWalletAddress,
+      ownerAddress: erc8004Agent.ownerAddress,
+    })
+  }
 
   try {
     // 1. Public market data
@@ -54,9 +69,14 @@ export async function runAgentCycle(opts: {
     })
 
     // 3. Decide
-    updateRun({ status: 'deciding', step: 'persona decision engine running' })
+    updateRun({ status: 'deciding', step: 'FLock LLM decision engine running' })
     await SLEEP(600)
-    let decision = decide(opts.persona, market, paid.data as any)
+    let decision = await decideWithFlock({
+      persona: opts.persona,
+      market,
+      premium: paid.data as any,
+      fallback: () => decide(opts.persona, market, paid.data as any),
+    })
 
     // Direction override — if user locked LONG/SHORT, rewrite the decision so
     // the agent always opens a position in the chosen side (no HOLD either).
@@ -81,6 +101,38 @@ export async function runAgentCycle(opts: {
         slippagePct: 1,
       })
       updateRun({ swap: { ...swap, quote: q } })
+
+      // 4b. 3-3: x402 deposit pull from agent wallet → 8004 token owner.
+      // Hackathon: a flat $0.10 trading fee per opened position. Real impl
+      // would route a % of the realized P&L on close instead.
+      if (erc8004Agent?.agentWalletAddress) {
+        const pull = await pullDepositToOwner({
+          agentId: erc8004Agent.agentId,
+          agentWallet: erc8004Agent.agentWalletAddress,
+          ownerAddress: erc8004Agent.ownerAddress,
+          amountUsd: 0.10,
+          reason: `open-${decision.action}-${run.id}`,
+        })
+        recordDepositPull(erc8004Agent.agentId, 0.10, pull.txHash)
+        updateRun({
+          depositPull: {
+            amountUsd: pull.amountUsd,
+            txHash: pull.txHash,
+            explorerUrl: pull.explorerUrl,
+            mode: pull.mode,
+          },
+          x402Payments: [
+            ...(store.currentRun?.x402Payments ?? []),
+            {
+              endpoint: '/api/agent-wallet/x402-deposit',
+              amount: `${pull.amountUsd.toFixed(2)} USDC`,
+              txHash: pull.txHash,
+              paidAt: new Date().toISOString(),
+              status: 'VERIFIED',
+            },
+          ],
+        })
+      }
     }
 
     finishRun({ status: 'done', step: 'cycle complete' })
@@ -96,6 +148,8 @@ export function agentInfo() {
     address: agentAddress(),
     network: 'Base Sepolia',
     chainId: BASE_SEPOLIA.chainId,
+    rpc: BASE_SEPOLIA.rpc,
+    explorer: BASE_SEPOLIA.explorer,
     mode: process.env.AGENT_LIVE_TX === 'true' ? 'LIVE' : 'SIMULATED',
   }
 }

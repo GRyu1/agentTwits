@@ -16,6 +16,7 @@ import {
 } from 'react'
 import { decide, type Persona } from '@/lib/agent/decide'
 import type { AgentDecision } from '@/lib/agent/store'
+import { useWallet } from '@/lib/wallet/context'
 
 export type Direction = 'LONG' | 'SHORT' | 'AUTO'
 
@@ -107,6 +108,12 @@ export function useMyTrader(): MyTraderCtx {
 }
 
 export default function MyTraderProvider({ children }: { children: ReactNode }) {
+  const { wallet, identity } = useWallet()
+  const ownerRef = useRef<string | undefined>(undefined)
+  const agentIdRef = useRef<string | undefined>(undefined)
+  ownerRef.current = wallet?.address
+  agentIdRef.current = identity?.agentId
+
   const [persona, setPersonaState] = useState<Persona>('yolo')
   const [direction, setDirection] = useState<Direction>('AUTO')
   const [heartbeat, setHeartbeat] = useState(false)
@@ -172,17 +179,41 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
     if (newOnes.length) setPositions(prev => [...newOnes, ...prev].slice(0, 20))
   }, [history])
 
+  // Helper: when a position closes, push the realized P&L to ReputationRegistry
+  // (3-4). USD pnl ≈ percentage * notional ($40 reference). Fire-and-forget.
+  const reportClose = (p: MyPosition, pnlPct: number, reason: string) => {
+    const owner = ownerRef.current
+    const agentId = agentIdRef.current
+    if (!owner || !agentId) return
+    const notionalUsd = 40
+    const pnlUsd = Number(((pnlPct / 100) * notionalUsd).toFixed(4))
+    fetch('/api/agent-wallet/close-position', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        agentId,
+        callerAddress: owner,
+        positionId: p.id,
+        pnlUsd,
+        closedReason: reason,
+      }),
+    }).catch(() => {})
+  }
+
   // ── Position tick — auto-close at maxAge ──
   useEffect(() => {
     const t = setInterval(() => {
       const now = Date.now()
-      setPositions(prev => prev.map(p =>
-        p.status === 'OPEN' && now - p.openedAt >= p.maxAge
-          ? { ...p, status: 'CLOSED', closedAt: now, realizedPnl: p.targetPnl, closedReason: 'TIMEOUT' }
-          : p,
-      ))
+      setPositions(prev => prev.map(p => {
+        if (p.status === 'OPEN' && now - p.openedAt >= p.maxAge) {
+          reportClose(p, p.targetPnl, 'TIMEOUT')
+          return { ...p, status: 'CLOSED', closedAt: now, realizedPnl: p.targetPnl, closedReason: 'TIMEOUT' }
+        }
+        return p
+      }))
     }, 1000)
     return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Run (manual or heartbeat-triggered) ──
@@ -194,6 +225,8 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
       body: JSON.stringify({
         persona: personaRef.current,
         forceDirection: directionRef.current,
+        ownerAddress: ownerRef.current,    // forwards 8004 owner so trading-agent
+                                           // can pull deposits + push reputation
       }),
     })
   }
@@ -226,6 +259,10 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
       setThinking(false)
       return
     }
+    if (currentRun.decision) {
+      setThinking(false)
+      return
+    }
     setThinking(true)
     const delayMs = 1000 + Math.random() * 3000
     const t = setTimeout(() => {
@@ -236,16 +273,17 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persona, marketKey, premiumKey])
 
-  const displayDecision = liveDecision ?? currentRun?.decision ?? null
+  const displayDecision = currentRun?.decision ?? liveDecision ?? null
 
   // ── Manual close ──
   const closePosition = (id: string) => {
     const now = Date.now()
-    setPositions(prev => prev.map(p =>
-      p.id === id && p.status === 'OPEN'
-        ? { ...p, status: 'CLOSED', closedAt: now, realizedPnl: myLivePnl(p, now), closedReason: 'MANUAL' }
-        : p,
-    ))
+    setPositions(prev => prev.map(p => {
+      if (p.id !== id || p.status !== 'OPEN') return p
+      const pnl = myLivePnl(p, now)
+      reportClose(p, pnl, 'MANUAL')
+      return { ...p, status: 'CLOSED', closedAt: now, realizedPnl: pnl, closedReason: 'MANUAL' }
+    }))
   }
 
   // ── setPersona wrapper: also closes positions whose direction now conflicts
@@ -262,11 +300,13 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
         (d.action === 'BUY'  && p.direction === 'SHORT') ||
         (d.action === 'SELL' && p.direction === 'LONG')
       if (!conflicts) return p
+      const pnl = myLivePnl(p, now)
+      reportClose(p, pnl, 'PERSONA_FLIP')
       return {
         ...p,
         status: 'CLOSED',
         closedAt: now,
-        realizedPnl: myLivePnl(p, now),
+        realizedPnl: pnl,
         closedReason: 'PERSONA_FLIP',
       }
     }))

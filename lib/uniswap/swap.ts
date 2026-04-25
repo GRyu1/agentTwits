@@ -10,6 +10,8 @@ import {
   parseEther,
   encodeFunctionData,
   formatUnits,
+  keccak256,
+  toBytes,
   type Address,
   type Hex,
 } from 'viem'
@@ -38,15 +40,17 @@ export interface SwapResult {
   error?: string
 }
 
+function demoAgentAddress(): Address {
+  const hash = keccak256(toBytes('agenttwits-demo-agent'))
+  return `0x${hash.slice(-40)}` as Address
+}
+
 function agentAccount() {
   const pk = process.env.AGENT_PRIVATE_KEY
   if (pk && pk.startsWith('0x') && pk.length === 66) {
     return privateKeyToAccount(pk as Hex)
   }
-  // Demo fallback: deterministic fake account so UI has a stable address
-  return privateKeyToAccount(
-    '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d' as Hex,
-  )
+  return null
 }
 
 function publicClient() {
@@ -104,6 +108,7 @@ function estimatedPrice(dir: SwapRequest['direction'], amountIn: number): number
 
 export async function executeSwap(req: SwapRequest): Promise<SwapResult> {
   const account = agentAccount()
+  const recipient = account?.address ?? demoAgentAddress()
   const amountInNum = parseFloat(req.amountIn)
   const slippage = req.slippagePct ?? 1
 
@@ -119,14 +124,14 @@ export async function executeSwap(req: SwapRequest): Promise<SwapResult> {
   const minOutWei = BigInt(Math.floor(minOut * 1e6)) // USDC 6 decimals
   let calldata: Hex = '0x'
   try {
-    calldata = buildEthToUsdcCalldata(account.address, amountInWei, minOutWei)
+    calldata = buildEthToUsdcCalldata(recipient, amountInWei, minOutWei)
   } catch {
     calldata = '0x00'
   }
 
   const live = process.env.AGENT_LIVE_TX === 'true'
 
-  if (live && process.env.AGENT_PRIVATE_KEY) {
+  if (live && account) {
     // Real broadcast path (only used if env flagged + wallet funded)
     try {
       const wallet = createWalletClient({
@@ -188,5 +193,5 @@ export async function executeSwap(req: SwapRequest): Promise<SwapResult> {
 }
 
 export function agentAddress(): Address {
-  return agentAccount().address
+  return agentAccount()?.address ?? demoAgentAddress()
 }

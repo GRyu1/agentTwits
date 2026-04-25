@@ -19,6 +19,7 @@ export interface AgentDecision {
   reasoning: string
   trend?: 'bullish' | 'bearish' | 'sideways'
   trendScore?: number
+  decisionSource?: 'FLOCK' | 'RULES'
 }
 
 export interface AgentRun {
@@ -33,6 +34,23 @@ export interface AgentRun {
   decision?: AgentDecision
   swap?: any
   error?: string
+  // ERC-8004 + AgentWallet context (set per-cycle when an authed user is bound)
+  agentId?: string
+  agentWalletAddress?: string
+  ownerAddress?: string
+  depositPull?: {
+    amountUsd: number
+    txHash: string
+    explorerUrl: string
+    mode: 'LIVE' | 'SIMULATED'
+  }
+  reputationUpdate?: {
+    pnlUsd: number
+    newScore: number
+    txHash: string
+    explorerUrl: string
+    mode: 'LIVE' | 'SIMULATED'
+  }
 }
 
 export interface ExternalAgent {
