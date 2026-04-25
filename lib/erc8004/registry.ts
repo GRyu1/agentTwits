@@ -15,7 +15,7 @@ import {
 } from 'viem'
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
 import { baseSepolia } from 'viem/chains'
-import { BASE_SEPOLIA } from '../uniswap/addresses'
+import { BASE_SEPOLIA } from '../pancakeswap/addresses'
 import { ERC8004 } from './addresses'
 import {
   IDENTITY_REGISTRY_ABI,

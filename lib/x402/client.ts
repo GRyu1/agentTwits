@@ -5,8 +5,8 @@
 
 import { generatePrivateKey } from 'viem/accounts'
 import type { Hex } from 'viem'
-import { BASE_SEPOLIA } from '../uniswap/addresses'
-import { agentAddress } from '../uniswap/swap'
+import { BASE_SEPOLIA } from '../pancakeswap/addresses'
+import { agentAddress } from '../pancakeswap/swap'
 
 export interface X402Requirement {
   scheme: 'exact'

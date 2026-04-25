@@ -30,6 +30,10 @@ interface AgentIdentity {
   registerTxHash: Hex
   registerExplorerUrl: string
   registerMode: 'LIVE' | 'SIMULATED'
+  // Coinbase AgentKit (CDP) wallet — the agent's on-chain signer.
+  cdpWalletAddress?: Address
+  cdpNetworkId?: string
+  cdpSource?: 'cdp' | 'mock'
 }
 
 interface AgentWalletSummary {
@@ -194,6 +198,9 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
         registerTxHash: j.txHash,
         registerExplorerUrl: j.explorerUrl,
         registerMode: j.mode,
+        cdpWalletAddress: j.cdpWallet?.address,
+        cdpNetworkId: j.cdpWallet?.networkId,
+        cdpSource: j.cdpWallet?.source,
       })
     } finally {
       setRegistering(false)

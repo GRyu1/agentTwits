@@ -6,7 +6,7 @@
 // self-identifies as MetaMask via `isMetaMask`.
 
 import type { Address, Hex } from 'viem'
-import { BASE_SEPOLIA } from '../uniswap/addresses'
+import { BASE_SEPOLIA } from '../pancakeswap/addresses'
 
 declare global {
   interface Window {

@@ -1,4 +1,4 @@
-// Uniswap V3 swap executor on Base Sepolia.
+// PancakeSwap V3 swap executor on Base Sepolia.
 // Hackathon-mode: builds a real, broadcast-ready tx but simulates the send
 // unless AGENT_LIVE_TX=true is set in env. This lets the demo run reliably
 // without requiring a funded wallet.
@@ -8,8 +8,8 @@ import {
   createPublicClient,
   http,
   parseEther,
+  parseUnits,
   encodeFunctionData,
-  formatUnits,
   keccak256,
   toBytes,
   type Address,
@@ -18,7 +18,7 @@ import {
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
 import { baseSepolia } from 'viem/chains'
 import { BASE_SEPOLIA, TOKENS, FEE_TIER_MEDIUM, type TokenSymbol } from './addresses'
-import { SWAP_ROUTER_02_ABI } from './abis'
+import { PANCAKE_V3_SWAP_ROUTER_ABI } from './abis'
 
 export interface SwapRequest {
   direction: 'ETH_TO_USDC' | 'USDC_TO_ETH'
@@ -61,37 +61,59 @@ function publicClient() {
 }
 
 /**
- * Build calldata for ETH → USDC via multicall(wrapETH, exactInputSingle).
- * We construct the real tx payload so the demo can display actual Uniswap calldata.
+ * Build calldata for PancakeSwap V3 exactInputSingle.
+ * We construct the real tx payload so the demo can display actual PancakeSwap calldata.
  */
-function buildEthToUsdcCalldata(recipient: Address, amountInWei: bigint, minOut: bigint): Hex {
+function buildSwapCalldata(
+  direction: SwapRequest['direction'],
+  recipient: Address,
+  amountIn: bigint,
+  minOut: bigint,
+): Hex {
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10)
 
-  const wrapETHData = encodeFunctionData({
-    abi: SWAP_ROUTER_02_ABI,
-    functionName: 'wrapETH',
-    args: [amountInWei],
-  })
+  if (direction === 'ETH_TO_USDC') {
+    const wrapETHData = encodeFunctionData({
+      abi: PANCAKE_V3_SWAP_ROUTER_ABI,
+      functionName: 'wrapETH',
+      args: [amountIn],
+    })
 
-  const swapData = encodeFunctionData({
-    abi: SWAP_ROUTER_02_ABI,
+    const swapData = encodeFunctionData({
+      abi: PANCAKE_V3_SWAP_ROUTER_ABI,
+      functionName: 'exactInputSingle',
+      args: [{
+        tokenIn: BASE_SEPOLIA.weth,
+        tokenOut: BASE_SEPOLIA.usdc,
+        fee: FEE_TIER_MEDIUM,
+        recipient,
+        deadline,
+        amountIn,
+        amountOutMinimum: minOut,
+        sqrtPriceLimitX96: 0n,
+      }],
+    })
+
+    return encodeFunctionData({
+      abi: PANCAKE_V3_SWAP_ROUTER_ABI,
+      functionName: 'multicall',
+      args: [[wrapETHData, swapData]],
+    })
+  }
+
+  return encodeFunctionData({
+    abi: PANCAKE_V3_SWAP_ROUTER_ABI,
     functionName: 'exactInputSingle',
     args: [{
-      tokenIn: BASE_SEPOLIA.weth,
-      tokenOut: BASE_SEPOLIA.usdc,
+      tokenIn: BASE_SEPOLIA.usdc,
+      tokenOut: BASE_SEPOLIA.weth,
       fee: FEE_TIER_MEDIUM,
       recipient,
       deadline,
-      amountIn: amountInWei,
+      amountIn,
       amountOutMinimum: minOut,
       sqrtPriceLimitX96: 0n,
     }],
-  })
-
-  return encodeFunctionData({
-    abi: SWAP_ROUTER_02_ABI,
-    functionName: 'multicall',
-    args: [[wrapETHData, swapData]],
   })
 }
 
@@ -119,12 +141,16 @@ export async function executeSwap(req: SwapRequest): Promise<SwapResult> {
   const estOut = estimatedPrice(req.direction, amountInNum)
   const minOut = estOut * (1 - slippage / 100)
 
-  // Construct real calldata so the demo shows actual Uniswap payload
-  const amountInWei = parseEther(req.amountIn)
-  const minOutWei = BigInt(Math.floor(minOut * 1e6)) // USDC 6 decimals
+  // Construct real calldata so the demo shows actual PancakeSwap payload
+  const amountInAtomic = req.direction === 'ETH_TO_USDC'
+    ? parseEther(req.amountIn)
+    : parseUnits(req.amountIn, 6)
+  const minOutAtomic = req.direction === 'ETH_TO_USDC'
+    ? parseUnits(minOut.toFixed(6), 6)
+    : parseEther(minOut.toFixed(18))
   let calldata: Hex = '0x'
   try {
-    calldata = buildEthToUsdcCalldata(recipient, amountInWei, minOutWei)
+    calldata = buildSwapCalldata(req.direction, recipient, amountInAtomic, minOutAtomic)
   } catch {
     calldata = '0x00'
   }
@@ -140,9 +166,9 @@ export async function executeSwap(req: SwapRequest): Promise<SwapResult> {
         transport: http(BASE_SEPOLIA.rpc),
       })
       const hash = await wallet.sendTransaction({
-        to: BASE_SEPOLIA.swapRouter02,
+        to: BASE_SEPOLIA.pancakeV3SwapRouter,
         data: calldata,
-        value: req.direction === 'ETH_TO_USDC' ? amountInWei : 0n,
+        value: req.direction === 'ETH_TO_USDC' ? amountInAtomic : 0n,
       })
       const receipt = await publicClient().waitForTransactionReceipt({ hash })
       return {

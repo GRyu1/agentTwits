@@ -1,13 +1,13 @@
-// Uniswap V3 contract addresses on Base Sepolia testnet
-// Source: https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
+// PancakeSwap V3 contract addresses on Base Sepolia.
+// These match PancakeSwap's V3 deployments; verified by eth_getCode on Base Sepolia.
 
 export const BASE_SEPOLIA = {
   chainId: 84532,
   rpc: 'https://sepolia.base.org',
   explorer: 'https://sepolia.basescan.org',
-  swapRouter02: '0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4' as const,
-  quoterV2:     '0xC5290058841028F1614F3A6F0F5816cAd0df5E27' as const,
-  factory:      '0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24' as const,
+  pancakeV3SwapRouter: '0x1b81D678ffb9C0263b24A97847620C99d213eB14' as const,
+  pancakeQuoterV2:     '0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997' as const,
+  pancakeV3Factory:    '0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865' as const,
   weth:         '0x4200000000000000000000000000000000000006' as const,
   usdc:         '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as const,
 } as const
@@ -19,4 +19,4 @@ export const TOKENS = {
 } as const
 
 export type TokenSymbol = keyof typeof TOKENS
-export const FEE_TIER_MEDIUM = 3000 // 0.3%
+export const FEE_TIER_MEDIUM = 2500 // PancakeSwap V3 0.25%

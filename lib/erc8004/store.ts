@@ -22,6 +22,16 @@ export interface AgentRecord {
   agentWalletMode?: 'LIVE' | 'SIMULATED'
   // Cumulative deposit pulled to owner via x402 (3-3)
   pulledDepositUsd: number
+  // Coinbase AgentKit CDP-managed server wallet for this agent (signs trades).
+  cdpWalletAddress?: Address
+  cdpWalletNetwork?: string
+  cdpWalletSource?: 'cdp' | 'mock'
+  // Virtuals ACP / OpenClaw marketplace registration.
+  acpAgentName?: string
+  acpWalletAddress?: Address
+  acpStatus?: 'REGISTERED' | 'SKIPPED' | 'FAILED'
+  acpError?: string
+  acpRegisteredAt?: string
 }
 
 interface ERC8004Store {
@@ -30,7 +40,7 @@ interface ERC8004Store {
   // Audit trail (3-3 + 3-4) — surfaced in My Trader UI for the demo
   log: Array<{
     at: string
-    kind: 'register' | 'create_wallet' | 'pull_deposit' | 'reputation_update'
+    kind: 'register' | 'create_wallet' | 'acp_register' | 'pull_deposit' | 'reputation_update'
     agentId: string
     detail: any
   }>
@@ -69,6 +79,24 @@ export function recordAgentWallet(agentId: string, patch: {
   Object.assign(a, patch)
   erc8004Store.log.unshift({
     at: new Date().toISOString(), kind: 'create_wallet', agentId,
+    detail: patch,
+  })
+  erc8004Store.log = erc8004Store.log.slice(0, 50)
+  return a
+}
+
+export function recordAcpRegistration(agentId: string, patch: {
+  acpAgentName?: string
+  acpWalletAddress?: Address
+  acpStatus: 'REGISTERED' | 'SKIPPED' | 'FAILED'
+  acpError?: string
+  acpRegisteredAt?: string
+}) {
+  const a = erc8004Store.agentsById[agentId]
+  if (!a) return null
+  Object.assign(a, patch)
+  erc8004Store.log.unshift({
+    at: new Date().toISOString(), kind: 'acp_register', agentId,
     detail: patch,
   })
   erc8004Store.log = erc8004Store.log.slice(0, 50)

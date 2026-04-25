@@ -161,10 +161,8 @@ export default function MyTraderProvider({ children }: { children: ReactNode }) 
   // ── Build positions from new completed runs; first load = mark seen only ──
   useEffect(() => {
     if (!initialized.current) {
-      if (history.length > 0) {
-        history.forEach(r => seenRuns.current.add(r.id))
-        initialized.current = true
-      }
+      history.forEach(r => seenRuns.current.add(r.id))
+      initialized.current = true
       return
     }
     const newOnes: MyPosition[] = []

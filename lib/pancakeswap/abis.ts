@@ -1,6 +1,6 @@
-// Minimal ABIs for Uniswap V3 SwapRouter02 + QuoterV2
+// Minimal ABIs for PancakeSwap V3 SwapRouter + QuoterV2
 
-export const SWAP_ROUTER_02_ABI = [
+export const PANCAKE_V3_SWAP_ROUTER_ABI = [
   {
     type: 'function',
     name: 'exactInputSingle',

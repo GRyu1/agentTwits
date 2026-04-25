@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import type { Address } from 'viem'
-import { BASE_SEPOLIA } from '@/lib/uniswap/addresses'
+import { BASE_SEPOLIA } from '@/lib/pancakeswap/addresses'
 import {
   assertAgentTokenAuth,
   pullDepositToOwner,

@@ -1,16 +1,16 @@
 // AgentTwits trading agent. One "cycle" does:
 //   fetch public market → pay x402 for premium → LLM-style decision
-//   → Uniswap V3 swap on Base Sepolia → persist result
+//   → PancakeSwap V3 swap on Base Sepolia → persist result
 
 import { getMarketSnapshot } from '../market/data'
 import { paidFetch } from '../x402/client'
-import { executeSwap, agentAddress } from '../uniswap/swap'
-import { quoteETHToUSDC } from '../uniswap/quote'
+import { executeSwap, agentAddress } from '../pancakeswap/swap'
+import { quoteETHToUSDC } from '../pancakeswap/quote'
 import {
   newRun, updateRun, finishRun, store,
   type X402Payment,
 } from './store'
-import { BASE_SEPOLIA } from '../uniswap/addresses'
+import { BASE_SEPOLIA } from '../pancakeswap/addresses'
 import { decide } from './decide'
 import { decideWithFlock } from './llm'
 import { getAgentByOwner, recordDepositPull } from '../erc8004/store'
@@ -93,7 +93,7 @@ export async function runAgentCycle(opts: {
 
     // 4. Execute if needed
     if (decision.action !== 'HOLD') {
-      updateRun({ status: 'swapping', step: 'Uniswap V3 exactInputSingle via multicall' })
+      updateRun({ status: 'swapping', step: 'PancakeSwap V3 exactInputSingle via multicall' })
       const q = await quoteETHToUSDC('0.001')
       const swap = await executeSwap({
         direction: decision.action === 'BUY' ? 'ETH_TO_USDC' : 'USDC_TO_ETH',

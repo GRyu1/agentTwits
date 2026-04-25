@@ -18,13 +18,13 @@ const STEP_LABEL: Record<string, string> = {
   fetching_market: 'Fetch market',
   paying_x402:     'Pay x402 · premium signal',
   deciding:        'Decide + emote',
-  swapping:        'Uniswap V3 swap',
+  swapping:        'PancakeSwap V3 swap',
 }
 const STEP_WHY: Record<string, string> = {
   fetching_market: 'Public price from CoinGecko first',
   paying_x402:     'Premium data (whale flow, funding) paid in USDC',
   deciding:        'Combine price + signal + persona → BUY/SELL/HOLD',
-  swapping:        'If action needed, swap on Base Sepolia Uniswap',
+  swapping:        'If action needed, swap on Base Sepolia PancakeSwap',
 }
 const STEPS = ['fetching_market', 'paying_x402', 'deciding', 'swapping'] as const
 
@@ -286,7 +286,7 @@ export default function AgentConsole() {
           {/* Swap — full width */}
           <div className="col-span-2" style={{ borderTop: '2px solid var(--line-2)' }}>
             <div className="panel-head" style={{ borderBottom: '2px solid var(--line-2)', color: 'var(--greed)' }}>
-              Uniswap V3 Execution
+              PancakeSwap V3 Execution
               {current.swap?.mode && (
                 <span className={`chip ${current.swap.mode === 'LIVE' ? 'chip-buy' : 'chip-money'} ml-auto`}>
                   {current.swap.mode}

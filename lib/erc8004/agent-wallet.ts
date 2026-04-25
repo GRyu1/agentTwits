@@ -24,7 +24,7 @@ import {
   type Hex,
 } from 'viem'
 import { generatePrivateKey } from 'viem/accounts'
-import { BASE_SEPOLIA } from '../uniswap/addresses'
+import { BASE_SEPOLIA } from '../pancakeswap/addresses'
 import { AGENT_WALLET, ERC8004 } from './addresses'
 import { AGENT_WALLET_FACTORY_ABI, AGENT_WALLET_ABI } from './abi'
 

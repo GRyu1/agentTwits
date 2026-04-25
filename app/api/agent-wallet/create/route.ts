@@ -4,7 +4,8 @@ import {
   assertAgentTokenAuth,
   createAgentWallet,
 } from '@/lib/erc8004/agent-wallet'
-import { getAgent, recordAgentWallet } from '@/lib/erc8004/store'
+import { registerAgentOnAcp } from '@/lib/acp/register'
+import { getAgent, recordAcpRegistration, recordAgentWallet } from '@/lib/erc8004/store'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,5 +46,20 @@ export async function POST(req: NextRequest) {
     agentWalletMode: info.mode,
   })
 
-  return NextResponse.json(info)
+  const acp = await registerAgentOnAcp({
+    agentId: body.agentId,
+    ownerAddress: body.ownerAddress as Address,
+    agentWalletAddress: info.walletAddress,
+    cdpWalletAddress: agent.cdpWalletAddress,
+    agentDomain: agent.agentDomain,
+  })
+  recordAcpRegistration(body.agentId, {
+    acpAgentName: acp.agentName,
+    acpWalletAddress: acp.walletAddress,
+    acpStatus: acp.status,
+    acpError: acp.error,
+    acpRegisteredAt: acp.status === 'REGISTERED' ? new Date().toISOString() : undefined,
+  })
+
+  return NextResponse.json({ ...info, acp })
 }

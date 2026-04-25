@@ -10,7 +10,8 @@
 // We implement the exact shape but skip on-chain verification for the demo.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { BASE_SEPOLIA } from '@/lib/uniswap/addresses'
+import { BASE_SEPOLIA } from '@/lib/pancakeswap/addresses'
+import { getNansenPremiumSignal } from '@/lib/nansen/signals'
 
 const PAY_TO = (process.env.X402_RECIPIENT_ADDRESS ??
   '0x0000000000000000000000000000000000000000') as `0x${string}`
@@ -38,22 +39,30 @@ function paymentRequirements(pathname: string) {
   }
 }
 
-function premiumPayload() {
-  const flipCoin = () => Math.random() > 0.5
-  const score = Math.random()
+async function premiumPayload() {
+  // Real signal: Nansen Smart Money netflow + Token-God-Mode indicators for
+  // WETH on Base. Falls back to a coherent mock when NANSEN_API_KEY isn't set.
+  const sig = await getNansenPremiumSignal()
   return {
-    source: 'AgentTwits Premium Signals v1',
+    source: sig.source === 'nansen' ? 'Nansen (Smart Money + TGM)' : 'AgentTwits Premium Signals v1 (mock)',
     paidVia: 'x402',
-    timestamp: new Date().toISOString(),
-    whaleActivity: score > 0.6 ? 'accumulation' : score > 0.35 ? 'neutral' : 'distribution',
-    fundingRate: Number(((Math.random() - 0.4) * 0.05).toFixed(4)),
-    openInterest: flipCoin() ? 'increasing' : 'decreasing',
-    liquidationZones: {
-      below: Math.round(2800 + Math.random() * 100),
-      above: Math.round(3250 + Math.random() * 120),
+    timestamp: sig.generatedAt,
+    whaleActivity: sig.whaleActivity,
+    fundingRate: sig.fundingRate,
+    openInterest: sig.netFlow24hUsd > 0 ? 'increasing' : 'decreasing',
+    liquidationZones: sig.liquidationZones,
+    recommendation: sig.recommendation,
+    confidence: sig.confidence,
+    nansen: {
+      netFlow1hUsd: sig.netFlow1hUsd,
+      netFlow24hUsd: sig.netFlow24hUsd,
+      netFlow7dUsd: sig.netFlow7dUsd,
+      traderCount: sig.traderCount,
+      riskSummary: sig.riskSummary,
+      rewardSummary: sig.rewardSummary,
+      priceMomentum: sig.priceMomentum,
+      attribution: sig.attribution,
     },
-    recommendation: score > 0.6 ? 'LONG_BIAS' : score < 0.35 ? 'SHORT_BIAS' : 'NEUTRAL',
-    confidence: Math.round(55 + Math.random() * 40),
   }
 }
 
@@ -69,13 +78,23 @@ export async function GET(req: NextRequest) {
   }
 
   // Minimal verification: header must be base64 JSON with txHash
+  let decoded: any
   try {
-    const decoded = JSON.parse(Buffer.from(payment, 'base64').toString('utf8'))
+    decoded = JSON.parse(Buffer.from(payment, 'base64').toString('utf8'))
     if (!decoded.txHash || typeof decoded.txHash !== 'string') throw new Error('missing txHash')
-    // In production: check the tx on-chain transferred USDC ≥ maxAmountRequired to payTo.
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: 'invalid x-payment header', detail: e?.message },
+      { status: 402 },
+    )
+  }
+
+  try {
+    // In production: check the tx on-chain transferred USDC >= maxAmountRequired to payTo.
+    const payload = await premiumPayload()
     return NextResponse.json(
       {
-        ...premiumPayload(),
+        ...payload,
         settlement: {
           status: 'VERIFIED',
           txHash: decoded.txHash,
@@ -87,8 +106,8 @@ export async function GET(req: NextRequest) {
     )
   } catch (e: any) {
     return NextResponse.json(
-      { error: 'invalid x-payment header', detail: e?.message },
-      { status: 402 },
+      { error: 'premium signal unavailable', detail: e?.message ?? 'signal build failed' },
+      { status: 502 },
     )
   }
 }

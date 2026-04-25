@@ -17,6 +17,13 @@ export async function GET(req: NextRequest) {
     totalPnlUsd: a.totalPnlUsd,
     feedbackCount: a.feedbackCount,
     pulledDepositUsd: a.pulledDepositUsd,
+    acp: {
+      agentName: a.acpAgentName,
+      walletAddress: a.acpWalletAddress,
+      status: a.acpStatus,
+      error: a.acpError,
+      registeredAt: a.acpRegisteredAt,
+    },
     log: recentLog().filter(l => l.agentId === agentId).slice(0, 12),
   })
 }

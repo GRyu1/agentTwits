@@ -25,13 +25,52 @@ interface RepView {
   totalPnlUsd: number
   feedbackCount: number
   pulledDepositUsd: number
+  acp?: {
+    agentName?: string
+    walletAddress?: string
+    status?: 'REGISTERED' | 'SKIPPED' | 'FAILED'
+    error?: string
+    registeredAt?: string
+  }
   log: Array<{
     at: string
-    kind: 'register' | 'create_wallet' | 'pull_deposit' | 'reputation_update'
+    kind: 'register' | 'create_wallet' | 'acp_register' | 'pull_deposit' | 'reputation_update'
     agentId: string
     detail: any
   }>
 }
+
+interface NansenLabelsView {
+  source: 'nansen' | 'mock'
+  labels: Array<{ label: string; category: string }>
+}
+
+interface NansenInflowsView {
+  source: 'nansen' | 'mock'
+  rows: Array<{
+    tokenAddress: string
+    tokenSymbol: string
+    chain: string
+    netFlow24hUsd: number
+    netFlow7dUsd: number
+    traderCount: number
+  }>
+}
+
+const fmtUsd = (n: number) => {
+  const sign = n < 0 ? '-' : '+'
+  const v = Math.abs(n)
+  if (v >= 1_000_000) return `${sign}$${(v / 1_000_000).toFixed(1)}M`
+  if (v >= 1_000) return `${sign}$${(v / 1_000).toFixed(1)}k`
+  return `${sign}$${v.toFixed(0)}`
+}
+
+const labelCategoryColor = (c: string) =>
+  c === 'smart_money' ? 'var(--money)' :
+  c === 'cefi' || c === 'cex' ? 'var(--fear)' :
+  c === 'defi' ? 'var(--buy)' :
+  c === 'behavioral' ? 'var(--ink)' :
+  'var(--ink-3)'
 
 export default function WalletPanel() {
   const {
@@ -56,6 +95,38 @@ export default function WalletPanel() {
     const t = setInterval(pull, 2500)
     return () => { stop = true; clearInterval(t) }
   }, [identity?.agentId])
+
+  // Nansen labels for the connected wallet (Smart Trader, Fund, ENS, …)
+  const [nansenLabels, setNansenLabels] = useState<NansenLabelsView | null>(null)
+  useEffect(() => {
+    if (!wallet?.address) {
+      setNansenLabels(null)
+      return
+    }
+    let stop = false
+    fetch(`/api/nansen/labels?address=${wallet.address}&chain=base`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (!stop && j) setNansenLabels(j) })
+      .catch(() => {})
+    return () => { stop = true }
+  }, [wallet?.address])
+
+  // Nansen Smart Money 24h inflows — what funds are accumulating right now.
+  const [inflows, setInflows] = useState<NansenInflowsView | null>(null)
+  useEffect(() => {
+    let stop = false
+    const pull = async () => {
+      try {
+        const r = await fetch('/api/nansen/inflows?limit=6', { cache: 'no-store' })
+        if (!r.ok) return
+        const j = await r.json()
+        if (!stop) setInflows(j)
+      } catch {}
+    }
+    pull()
+    const t = setInterval(pull, 30_000)
+    return () => { stop = true; clearInterval(t) }
+  }, [])
 
   const onWrongChain = !!wallet && !wallet.onBaseSepolia
 
@@ -86,6 +157,37 @@ export default function WalletPanel() {
               <Row k="Chain" v={onWrongChain
                 ? <span className="text-sell font-bold">{wallet.chainId} (switch ↗)</span>
                 : <span className="text-buy font-bold">Base Sepolia</span>} />
+              {/* Nansen labels for the connected wallet — Smart Trader, Fund, ENS, … */}
+              {nansenLabels && (
+                <div className="pt-2 mt-2" style={{ borderTop: '1.5px dashed var(--line-2)' }}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-xs text-ink-3">Nansen</span>
+                    <span className={`chip ${nansenLabels.source === 'nansen' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
+                      {nansenLabels.source === 'nansen' ? 'LIVE' : 'MOCK'}
+                    </span>
+                  </div>
+                  {nansenLabels.labels.length === 0 ? (
+                    <div className="text-xs text-ink-3 italic">no labels — anon wallet</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {nansenLabels.labels.slice(0, 6).map((l, i) => (
+                        <span
+                          key={i}
+                          className="chip"
+                          style={{
+                            fontSize: 10,
+                            color: labelCategoryColor(l.category),
+                            borderColor: labelCategoryColor(l.category),
+                          }}
+                          title={`category: ${l.category}`}
+                        >
+                          {l.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : metamaskInstalled ? (
             <button onClick={connect} disabled={connecting} className="btn btn-money" style={{ width: '100%' }}>
@@ -123,6 +225,19 @@ export default function WalletPanel() {
                 </a>
               } />
               <Row k="mode" v={<span className={identity.registerMode === 'LIVE' ? 'text-buy font-bold' : 'text-money font-bold'}>{identity.registerMode}</span>} />
+              {/* AgentKit (CDP) signer — replaces the AGENT_PRIVATE_KEY env path */}
+              {identity.cdpWalletAddress && (
+                <div className="pt-2 mt-2" style={{ borderTop: '1.5px dashed var(--line-2)' }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs text-ink-3">AgentKit signer</span>
+                    <span className={`chip ${identity.cdpSource === 'cdp' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
+                      {identity.cdpSource === 'cdp' ? 'CDP LIVE' : 'CDP MOCK'}
+                    </span>
+                  </div>
+                  <Row k="cdp" v={<span className="font-mono text-xs">{shortAddr(identity.cdpWalletAddress)}</span>} />
+                  <Row k="net" v={<span className="font-mono text-xs">{identity.cdpNetworkId ?? 'base-sepolia'}</span>} />
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -153,6 +268,26 @@ export default function WalletPanel() {
                   {shortHash(agentWallet.txHash)}
                 </a>
               } />
+              {rep?.acp?.status && (
+                <div className="pt-2 mt-2" style={{ borderTop: '1.5px dashed var(--line-2)' }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs text-ink-3">Virtuals ACP</span>
+                    <span className={`chip ${
+                      rep.acp.status === 'REGISTERED' ? 'chip-money' :
+                      rep.acp.status === 'FAILED' ? 'chip-sell' : 'chip-ghost'
+                    }`} style={{ fontSize: 9 }}>
+                      {rep.acp.status}
+                    </span>
+                  </div>
+                  <Row k="name" v={<span className="font-mono text-xs">{rep.acp.agentName ?? '—'}</span>} />
+                  {rep.acp.walletAddress && (
+                    <Row k="acp wallet" v={<span className="font-mono text-xs">{shortAddr(rep.acp.walletAddress)}</span>} />
+                  )}
+                  {rep.acp.error && (
+                    <div className="text-xs text-sell leading-snug line-clamp-2">{rep.acp.error}</div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -166,6 +301,45 @@ export default function WalletPanel() {
           )}
         </Step>
       </div>
+
+      {/* Nansen Smart Money 24h inflows — what funds are buying right now */}
+      {inflows && inflows.rows.length > 0 && (
+        <div className="px-4 py-3" style={{ borderBottom: '2px solid var(--line-2)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs text-ink-3 uppercase tracking-wider">Nansen · Smart Money 24h Inflow</span>
+            <span className={`chip ${inflows.source === 'nansen' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
+              {inflows.source === 'nansen' ? 'LIVE' : 'MOCK'}
+            </span>
+            <span className="ml-auto text-xs text-ink-3 font-mono">funds &amp; smart traders only</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {inflows.rows.slice(0, 6).map(r => {
+              const positive = r.netFlow24hUsd >= 0
+              return (
+                <div
+                  key={`${r.chain}:${r.tokenAddress}`}
+                  className="px-2 py-1.5"
+                  style={{ border: '1.5px solid var(--line-2)' }}
+                >
+                  <div className="flex items-center gap-1">
+                    <span className="font-display font-bold text-sm">{r.tokenSymbol}</span>
+                    <span className="text-xs text-ink-3 ml-auto">{r.chain}</span>
+                  </div>
+                  <div
+                    className="font-mono font-bold text-sm tabular-nums"
+                    style={{ color: positive ? 'var(--buy)' : 'var(--sell)' }}
+                  >
+                    {fmtUsd(r.netFlow24hUsd)}
+                  </div>
+                  <div className="text-xs text-ink-3 font-mono">
+                    {r.traderCount} traders
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Reputation + activity ledger */}
       {identity && (
@@ -198,15 +372,18 @@ export default function WalletPanel() {
                     <span className={`chip ${
                       l.kind === 'reputation_update' ? (l.detail.pnlUsd >= 0 ? 'chip-buy' : 'chip-sell') :
                       l.kind === 'pull_deposit' ? 'chip-money' :
+                      l.kind === 'acp_register' ? (l.detail.acpStatus === 'REGISTERED' ? 'chip-money' : l.detail.acpStatus === 'FAILED' ? 'chip-sell' : 'chip-ghost') :
                       l.kind === 'create_wallet' ? 'chip-ghost' : 'chip-ghost'
                     }`} style={{ fontSize: 9 }}>
                       {l.kind === 'reputation_update' ? 'REP' :
                        l.kind === 'pull_deposit' ? 'PULL' :
+                       l.kind === 'acp_register' ? 'ACP' :
                        l.kind === 'create_wallet' ? 'WALLET' : 'REG'}
                     </span>
                     <span className="text-ink-2 flex-1 truncate">
                       {l.kind === 'reputation_update' && `pnl $${l.detail.pnlUsd.toFixed(2)} → score ${l.detail.newScore}`}
                       {l.kind === 'pull_deposit' && `$${l.detail.amountUsd.toFixed(2)} → ${shortAddr(l.detail.toOwner)}`}
+                      {l.kind === 'acp_register' && `${l.detail.acpStatus} ${l.detail.acpAgentName ?? ''}`}
                       {l.kind === 'create_wallet' && `clone ${shortAddr(l.detail.agentWalletAddress)}`}
                       {l.kind === 'register' && `owner ${shortAddr(l.detail.owner)}`}
                     </span>

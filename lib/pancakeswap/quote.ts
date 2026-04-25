@@ -1,4 +1,4 @@
-// Uniswap V3 QuoterV2 wrapper. Falls back to mock pricing for demo reliability.
+// PancakeSwap V3 QuoterV2 wrapper. Falls back to mock pricing for demo reliability.
 
 import { createPublicClient, http, parseEther, type Address } from 'viem'
 import { baseSepolia } from 'viem/chains'
@@ -10,7 +10,7 @@ export interface Quote {
   amountOut: string
   priceImpactPct: number
   gasEstimate: string
-  source: 'UNISWAP_QUOTER' | 'MOCK'
+  source: 'PANCAKESWAP_QUOTER' | 'MOCK'
 }
 
 export async function quoteETHToUSDC(amountInEth: string): Promise<Quote> {
@@ -20,7 +20,7 @@ export async function quoteETHToUSDC(amountInEth: string): Promise<Quote> {
     try {
       const client = createPublicClient({ chain: baseSepolia, transport: http(BASE_SEPOLIA.rpc) })
       const result = await client.readContract({
-        address: BASE_SEPOLIA.quoterV2,
+        address: BASE_SEPOLIA.pancakeQuoterV2,
         abi: QUOTER_V2_ABI,
         functionName: 'quoteExactInputSingle',
         args: [{
@@ -37,7 +37,7 @@ export async function quoteETHToUSDC(amountInEth: string): Promise<Quote> {
         amountOut: (Number(amountOut) / 1e6).toFixed(2),
         priceImpactPct: 0.12,
         gasEstimate: gasEstimate.toString(),
-        source: 'UNISWAP_QUOTER',
+        source: 'PANCAKESWAP_QUOTER',
       }
     } catch {
       /* fall through to mock */
