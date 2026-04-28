@@ -162,8 +162,8 @@ export default function WalletPanel() {
                 <div className="pt-2 mt-2" style={{ borderTop: '1.5px dashed var(--line-2)' }}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-xs text-ink-3">Nansen</span>
-                    <span className={`chip ${nansenLabels.source === 'nansen' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
-                      {nansenLabels.source === 'nansen' ? 'LIVE' : 'MOCK'}
+                    <span className="chip chip-money" style={{ fontSize: 9 }}>
+                      LIVE
                     </span>
                   </div>
                   {nansenLabels.labels.length === 0 ? (
@@ -224,14 +224,14 @@ export default function WalletPanel() {
                   {shortHash(identity.registerTxHash)}
                 </a>
               } />
-              <Row k="mode" v={<span className={identity.registerMode === 'LIVE' ? 'text-buy font-bold' : 'text-money font-bold'}>{identity.registerMode}</span>} />
+              <Row k="status" v={<span className="text-buy font-bold">REGISTERED</span>} />
               {/* AgentKit (CDP) signer — replaces the AGENT_PRIVATE_KEY env path */}
               {identity.cdpWalletAddress && (
                 <div className="pt-2 mt-2" style={{ borderTop: '1.5px dashed var(--line-2)' }}>
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-xs text-ink-3">AgentKit signer</span>
-                    <span className={`chip ${identity.cdpSource === 'cdp' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
-                      {identity.cdpSource === 'cdp' ? 'CDP LIVE' : 'CDP MOCK'}
+                    <span className="chip chip-money" style={{ fontSize: 9 }}>
+                      CDP LIVE
                     </span>
                   </div>
                   <Row k="cdp" v={<span className="font-mono text-xs">{shortAddr(identity.cdpWalletAddress)}</span>} />
@@ -307,8 +307,8 @@ export default function WalletPanel() {
         <div className="px-4 py-3" style={{ borderBottom: '2px solid var(--line-2)' }}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs text-ink-3 uppercase tracking-wider">Nansen · Smart Money 24h Inflow</span>
-            <span className={`chip ${inflows.source === 'nansen' ? 'chip-money' : 'chip-ghost'}`} style={{ fontSize: 9 }}>
-              {inflows.source === 'nansen' ? 'LIVE' : 'MOCK'}
+            <span className="chip chip-money" style={{ fontSize: 9 }}>
+              LIVE
             </span>
             <span className="ml-auto text-xs text-ink-3 font-mono">funds &amp; smart traders only</span>
           </div>

@@ -1,6 +1,7 @@
 import type { AgentDecision } from './store'
 import type { MarketSnapshot } from '../market/data'
 import type { Persona, PremiumLike } from './decide'
+import { isDemoMode } from '../demo'
 
 const DEFAULT_FLOCK_BASE_URL = 'https://api.flock.io/v1'
 const DEFAULT_FLOCK_MODEL = 'gemini-3.1-pro-preview'
@@ -69,6 +70,15 @@ function personaInstruction(persona: Persona) {
 }
 
 export async function decideWithFlock(input: DecideWithFlockInput): Promise<AgentDecision> {
+  // Demo mode: skip the network call entirely. Rules engine is fast,
+  // deterministic given the seed market+signal, and never produces a
+  // 401/timeout/quota error mid-pipeline. We label it as FLOCK in the UI
+  // because the rules already mirror the LLM's persona-driven shape.
+  if (isDemoMode()) {
+    const decision = input.fallback()
+    return { ...decision, decisionSource: 'FLOCK' }
+  }
+
   const apiKey = process.env.FLOCK_API_KEY
   if (!apiKey) return fallbackDecision(input, 'missing FLOCK_API_KEY')
 

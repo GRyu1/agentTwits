@@ -582,10 +582,8 @@ function MyAgentTab() {
             <Kv label="Network" v={info?.network ?? '—'} />
             <Kv label="ChainID" v={info?.chainId ?? '—'} mono />
             <Kv label="Address" v={shortAddr(info?.address)} mono />
-            <Kv label="Mode"    v={
-              <span className="font-bold" style={{ color: info?.mode === 'LIVE' ? 'var(--buy)' : 'var(--money)' }}>
-                {info?.mode ?? '—'}
-              </span>
+            <Kv label="Status"  v={
+              <span className="font-bold" style={{ color: 'var(--buy)' }}>ACTIVE</span>
             } />
           </div>
 

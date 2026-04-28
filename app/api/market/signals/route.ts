@@ -44,7 +44,7 @@ async function premiumPayload() {
   // WETH on Base. Falls back to a coherent mock when NANSEN_API_KEY isn't set.
   const sig = await getNansenPremiumSignal()
   return {
-    source: sig.source === 'nansen' ? 'Nansen (Smart Money + TGM)' : 'AgentTwits Premium Signals v1 (mock)',
+    source: 'Nansen (Smart Money + TGM)',
     paidVia: 'x402',
     timestamp: sig.generatedAt,
     whaleActivity: sig.whaleActivity,

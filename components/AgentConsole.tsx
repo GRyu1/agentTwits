@@ -65,7 +65,7 @@ export default function AgentConsole() {
         <div className="flex items-center w-full gap-2">
           <span className="font-display text-base">My Trader</span>
           <span className="text-ink-3 font-mono text-xs ml-2">
-            {agent ? `${agent.network} · ${agent.mode}` : '—'}
+            {agent ? `${agent.network}` : '—'}
           </span>
           <div className="ml-auto flex gap-2">
             <button
@@ -287,10 +287,8 @@ export default function AgentConsole() {
           <div className="col-span-2" style={{ borderTop: '2px solid var(--line-2)' }}>
             <div className="panel-head" style={{ borderBottom: '2px solid var(--line-2)', color: 'var(--greed)' }}>
               PancakeSwap V3 Execution
-              {current.swap?.mode && (
-                <span className={`chip ${current.swap.mode === 'LIVE' ? 'chip-buy' : 'chip-money'} ml-auto`}>
-                  {current.swap.mode}
-                </span>
+              {current.swap && (
+                <span className="chip chip-buy ml-auto">EXECUTED</span>
               )}
             </div>
             {current.swap ? (

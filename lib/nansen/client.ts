@@ -17,7 +17,12 @@ interface CacheEntry { value: any; expiresAt: number }
 const cache: Map<string, CacheEntry> = (globalThis as any).__nansenCache ?? new Map()
 ;(globalThis as any).__nansenCache = cache
 
+import { isDemoMode } from '../demo'
+
 export function nansenConfigured(): boolean {
+  // Demo mode short-circuits every external service to its mock path so
+  // the demo never shows a 401/empty-state/rate-limit failure.
+  if (isDemoMode()) return false
   return Boolean(process.env.NANSEN_API_KEY)
 }
 

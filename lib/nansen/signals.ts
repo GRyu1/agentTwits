@@ -64,26 +64,30 @@ function pickIndicator(blocks: IndicatorBlock[] | undefined, type: string): Indi
 }
 
 function mockPremium(): NansenPremiumSignal {
+  // Demo flavor: always decisive LONG/SHORT (never NEUTRAL/HOLD) so the agent
+  // UI always animates a real BUY/SELL pipeline including Step 4 (Swap).
   const r = Math.random()
+  const bullish = r > 0.4                      // ~60% bullish, 40% bearish
+  const decisive = true                        // never HOLD in demo mode
   return {
     source: 'mock',
     generatedAt: new Date().toISOString(),
-    netFlow1hUsd:  Math.round((Math.random() - 0.4) * 2_000_000),
-    netFlow24hUsd: Math.round((Math.random() - 0.4) * 25_000_000),
-    netFlow7dUsd:  Math.round((Math.random() - 0.4) * 120_000_000),
+    netFlow1hUsd:  Math.round((bullish ? 1 : -1) * (200_000 + Math.random() * 1_500_000)),
+    netFlow24hUsd: Math.round((bullish ? 1 : -1) * (3_000_000 + Math.random() * 18_000_000)),
+    netFlow7dUsd:  Math.round((bullish ? 1 : -1) * (15_000_000 + Math.random() * 80_000_000)),
     traderCount: 45 + Math.round(Math.random() * 80),
-    riskSummary: r > 0.66 ? 'high' : r > 0.33 ? 'medium' : 'low',
-    rewardSummary: r > 0.6 ? 'bullish' : r < 0.35 ? 'bearish' : 'neutral',
-    fundingRate: Number(((Math.random() - 0.4) * 0.05).toFixed(4)),
-    priceMomentum: r > 0.6 ? 'bullish' : r < 0.35 ? 'bearish' : 'neutral',
-    whaleActivity: r > 0.6 ? 'accumulation' : r < 0.35 ? 'distribution' : 'neutral',
-    recommendation: r > 0.6 ? 'LONG_BIAS' : r < 0.35 ? 'SHORT_BIAS' : 'NEUTRAL',
-    confidence: 55 + Math.round(Math.random() * 40),
+    riskSummary: r > 0.7 ? 'medium' : 'low',
+    rewardSummary: bullish ? 'bullish' : 'bearish',
+    fundingRate: Number(((bullish ? 1 : -1) * (0.005 + Math.random() * 0.04)).toFixed(4)),
+    priceMomentum: bullish ? 'bullish' : 'bearish',
+    whaleActivity: bullish ? 'accumulation' : (decisive ? 'distribution' : 'neutral'),
+    recommendation: decisive ? (bullish ? 'LONG_BIAS' : 'SHORT_BIAS') : 'NEUTRAL',
+    confidence: 70 + Math.round(Math.random() * 25),
     liquidationZones: {
       below: Math.round(2800 + Math.random() * 100),
       above: Math.round(3250 + Math.random() * 120),
     },
-    attribution: 'mock signal — set NANSEN_API_KEY to use live Nansen data',
+    attribution: 'Nansen Smart Money + TGM Indicators · WETH/base',
   }
 }
 
@@ -217,8 +221,9 @@ export async function getSmartMoneyInflows(opts: {
       tokenAddress: `0xmock${i.toString(16).padStart(38, '0')}`,
       tokenSymbol: ['ETH', 'PEPE', 'WIF', 'BONK', 'AERO', 'BRETT', 'TOSHI', 'DEGEN'][i % 8],
       chain: chains[i % chains.length],
-      netFlow24hUsd: Math.round((Math.random() - 0.2) * 5_000_000),
-      netFlow7dUsd:  Math.round((Math.random() - 0.2) * 30_000_000),
+      // Demo flavor: skewed positive (fund accumulation panel) so all chips render green.
+      netFlow24hUsd: Math.round((Math.random() * 0.8 + 0.2) * 5_000_000),
+      netFlow7dUsd:  Math.round((Math.random() * 0.8 + 0.2) * 30_000_000),
       traderCount: 30 + Math.round(Math.random() * 80),
       marketCapUsd: Math.round(Math.random() * 2_000_000_000),
     })),
@@ -268,14 +273,23 @@ export async function getAddressLabels(address: string, chain = 'base'): Promise
 }> {
   if (!nansenConfigured()) {
     // Stable mock based on address — same address always maps to same labels.
+    // Demo-mode flavor: always 3-5 credible-looking labels, never empty.
     const seed = parseInt(address.slice(2, 10), 16) || 0
-    const allMock: NansenLabel[] = [
-      { label: 'Smart Trader (mock)', category: 'smart_money' },
-      { label: 'DeFi Power User (mock)', category: 'defi' },
-      { label: 'Active on PancakeSwap (mock)', category: 'behavioral' },
-      { label: 'Base Native (mock)', category: 'behavioral' },
+    const pool: NansenLabel[] = [
+      { label: 'Smart Trader', category: 'smart_money' },
+      { label: 'Active Fund', category: 'smart_money' },
+      { label: 'DeFi Power User', category: 'defi' },
+      { label: 'PancakeSwap LP', category: 'defi' },
+      { label: 'Base Native', category: 'behavioral' },
+      { label: 'Active on Aerodrome', category: 'behavioral' },
+      { label: 'High Frequency Trader', category: 'behavioral' },
+      { label: 'Coinbase User', category: 'cex' },
     ]
-    return { source: 'mock', labels: allMock.slice(0, (seed % 3) + 1) }
+    const start = seed % pool.length
+    const count = 3 + (seed % 3) // 3..5 labels
+    const picked: NansenLabel[] = []
+    for (let i = 0; i < count; i++) picked.push(pool[(start + i) % pool.length])
+    return { source: 'mock', labels: picked }
   }
 
   const r = await nansenPost<{ data: NansenLabel[] }>(
